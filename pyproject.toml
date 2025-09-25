@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cygnet"
+version = "0.1.0"
+description = "Cygnet: a small C compiler (Python implementation)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Johnnie Walker" }]
+dependencies = ["typer>=0.12"]
+
+[project.scripts]
+cygnet = "cygnet.main:app"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
