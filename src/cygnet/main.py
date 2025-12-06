@@ -1,30 +1,32 @@
 import typer
-import importlib.metadata
+from typing import Optional
+from pathlib import Path
+from .driver import compile_driver
 
 app = typer.Typer(help="Cygnet: a simple C compiler in Python")
 
-@app.command()
-def clitest():
-    """A test command to verify the CLI is working."""
-    typer.echo("Cygnet CLI is working!")
+@app.callback(invoke_without_command=True)
+def build(
+        path: Optional[Path] = typer.Argument(None, help="C source file to compile"),
+        lex: bool = typer.Option(False, "--lex", help="Run lexer only"),
+        parse: bool = typer.Option(False, "--parse", help="Run lexer and parser only"),
+        codegen: bool = typer.Option(False, "--codegen", help="Run lexer, parser and assembly generation")):
 
-@app.command()
-def build():
-    pass
+    if path is None:
+        typer.echo("Error: no source file provided")
+        raise typer.Exit(1)    
 
-@app.callback()
-def main(
-    version: bool = typer.Option(
-        False,
-        "--version",
-        "-v",
-        help="Show version and exit.",
-        is_eager=True,
-    )
-):
-    if version:
-        typer.echo(importlib.metadata.version("cygnet"))
-        raise typer.Exit()
+    if lex:
+        mode = "lex"
+    elif parse:
+        mode = "parse"
+    elif codegen:
+        mode = "codegen"
+    else:
+        mode = "default"
+
+    compile_driver(path, mode)
+    raise typer.Exit(0)
 
 if __name__ == "__main__":
     app()
