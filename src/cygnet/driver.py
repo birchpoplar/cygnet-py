@@ -1,30 +1,54 @@
 from pathlib import Path
 import subprocess
 import os
+from rich import print
 
 # Compiler driver functions
 
 def compile_driver(path: Path, mode: str):
-    preprocess_file(path, mode)
-    if mode != "default":
-        part_compile_file(path, mode)
-    else:
-        compile_file(path, mode)
+    preprocess_file(path)
 
-def preprocess_file(path: Path, mode: str):
-    print("Preprocessing file...")
+    if mode in ("lex", "parse", "codegen"):
+        
+        result = part_compile_file(path, mode)
+
+        if result == 0:
+            pass
+        else:
+            return 1
+        
+    else:
+        result = compile_file(path)
+        
+        if result == 0:
+            pass
+        else:
+            return 1
+
+    if mode != "assemble":
+        link_file(path)
+
+    return 0
+    
+def preprocess_file(path: Path):
 
     source_file = path
     preproc_file = path.with_suffix(".i")
-    
-    result = subprocess.run(
-        ["gcc", "-E", "-P", source_file, "-o", preproc_file],
-        capture_output=True,
-        text=True,
-        check=True
-        )
 
-    return result.returncode
+    print(f"[green]Preprocessing file[/green] : {source_file}")
+
+    try:
+        result = subprocess.run(
+            ["gcc", "-E", "-P", source_file, "-o", preproc_file],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Preprocessing failed:\n{e.stderr}")
+        return 1
+
+    return 0
 
 def part_compile_file(path: Path, mode: str):
     print("Part compiling file...")
@@ -50,32 +74,66 @@ def part_compile_file(path: Path, mode: str):
         print("Deleting preprocessed file...")
         os.remove(preproc_file)
 
-    return
-    
-def compile_file(path: Path, mode: str):
-    print("Compiling file...")
+    return 0
+
+def compile_file(path: Path):
 
     source_file = path
-    
-    result = subprocess.run(
-        ["gcc", "-S", "-O", "-fno-asynchronous-unwind-tables", "-fcf-protection=none", source_file],
-        capture_output=True,
-        text=True,
-        check=True
-        )
 
-    # Delete preprocessed file if it exists
+    print(f"[green]Compiling file[/green] : {source_file}")
+    
+    try:
+        result = subprocess.run(
+            ["gcc", "-S", "-O", "-fno-asynchronous-unwind-tables", "-fcf-protection=none", source_file],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Compilation failed:\n{e.stderr}")
+        return 1
+
+    print(f"[green]Assembly file created[/green] : {source_file.with_suffix('.s')}")
+
+    cleanup_preprocessed(path)
+    
+    return 0
+
+def link_file(path: Path):
+
+    assembly_file = path.with_suffix(".s")
+    output_executable = path.stem
+
+    print(f"[green]Linking file[/green] : {assembly_file}")
+
+    try:
+        result = subprocess.run(
+            ["gcc", assembly_file, "-o", output_executable],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Linking failed:\n{e.stderr}")
+        return 1
+
+    cleanup_assembly(path)
+
+    print(f"[green]Output executable generated[/green] : {output_executable}")
+    
+    return 0
+
+def cleanup_preprocessed(path: Path):
     preproc_file = path.with_suffix(".i")
 
     if os.path.exists(preproc_file):
-        print("Deleting preprocessed file...")
+        print("[blue]Deleting preprocessed file...[/blue]")
         os.remove(preproc_file)
+    
 
-    # Delete assembly file if it exists
+def cleanup_assembly(path: Path):
     assembly_file = path.with_suffix(".s")
 
     if os.path.exists(assembly_file):
-        print("Deleting assembly file...")
+        print("[blue]Deleting assembly file...[/blue]")
         os.remove(assembly_file)
-        
-    return result.returncode
