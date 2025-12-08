@@ -2,13 +2,17 @@ from pathlib import Path
 import subprocess
 import os
 from rich import print
+from .lexer import lexer
 
 # Compiler driver functions
 
 def compile_driver(path: Path, mode: str):
     preprocess_file(path)
-
+    part_compile = False
+    
     if mode in ("lex", "parse", "codegen"):
+
+        part_compile = True
         
         result = part_compile_file(path, mode)
 
@@ -26,7 +30,8 @@ def compile_driver(path: Path, mode: str):
             return 1
 
     if mode != "assemble":
-        link_file(path)
+        if not part_compile:
+            link_file(path)
 
     return 0
     
@@ -55,7 +60,8 @@ def part_compile_file(path: Path, mode: str):
 
     if mode == "lex":
         print("Lexing file...")
-        pass
+        lexer(path)
+        
     elif mode == "parse":
         print("Parsing file...")
         pass
