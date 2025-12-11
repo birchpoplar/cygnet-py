@@ -3,10 +3,11 @@ import subprocess
 import os
 from rich import print
 from .lexer import lexer
+from .print import print_source_code, print_msg, print_error
 
 # Compiler driver functions
 
-def compile_driver(path: Path, mode: str):
+def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tokens: bool = False):
     preprocess_file(path)
     part_compile = False
     
@@ -14,7 +15,7 @@ def compile_driver(path: Path, mode: str):
 
         part_compile = True
         
-        result = part_compile_file(path, mode)
+        result = part_compile_file(path, mode, print_source, print_tokens)
 
         if result == 0:
             pass
@@ -40,7 +41,7 @@ def preprocess_file(path: Path):
     source_file = path
     preproc_file = path.with_suffix(".i")
 
-    print(f"[green]Preprocessing file[/green] : {source_file}")
+    print_msg("INFO", f"Preprocessing file : {path}") 
 
     try:
         result = subprocess.run(
@@ -50,17 +51,30 @@ def preprocess_file(path: Path):
             check=True
         )
     except subprocess.CalledProcessError as e:
-        print(f"Preprocessing failed:\n{e.stderr}")
+        print_error(f"Preprocessing failed : {e.stderr}")
         return 1
 
     return 0
 
-def part_compile_file(path: Path, mode: str):
-    print("Part compiling file...")
+def read_lines(path: Path):
+    with open(path, 'r') as f:
+        lines = f.readlines()
 
+    stripped_lines = [line.strip() for line in lines]
+
+    return stripped_lines
+
+def part_compile_file(path: Path, mode: str, print_source: bool = False, print_tokens: bool = False):
+    print_msg("INFO", "Part compiling file...")
+
+    source_code = read_lines(path)
+
+    if print_source:
+        print_source_code(source_code)
+    
     if mode == "lex":
-        print("Lexing file...")
-        lexer(path)
+        print_msg("INFO", "Lexing file...")
+        lexer(source_code, print_tokens)
         
     elif mode == "parse":
         print("Parsing file...")
@@ -77,7 +91,7 @@ def part_compile_file(path: Path, mode: str):
     preproc_file = path.with_suffix(".i")
 
     if os.path.exists(preproc_file):
-        print("Deleting preprocessed file...")
+        print_msg("INFO", "Deleting preprocessed file...")
         os.remove(preproc_file)
 
     return 0
@@ -86,7 +100,7 @@ def compile_file(path: Path):
 
     source_file = path
 
-    print(f"[green]Compiling file[/green] : {source_file}")
+    print_msg("INFO", f"Compiling file : {source_file}")
     
     try:
         result = subprocess.run(
@@ -99,7 +113,7 @@ def compile_file(path: Path):
         print(f"Compilation failed:\n{e.stderr}")
         return 1
 
-    print(f"[green]Assembly file created[/green] : {source_file.with_suffix('.s')}")
+    print_msg("INFO", f"Assembly file created : {source_file.with_suffix('.s')}")
 
     cleanup_preprocessed(path)
     
@@ -110,7 +124,7 @@ def link_file(path: Path):
     assembly_file = path.with_suffix(".s")
     output_executable = path.stem
 
-    print(f"[green]Linking file[/green] : {assembly_file}")
+    print_msg("INFO", f"Linking file : {assembly_file}")
 
     try:
         result = subprocess.run(
@@ -125,7 +139,7 @@ def link_file(path: Path):
 
     cleanup_assembly(path)
 
-    print(f"[green]Output executable generated[/green] : {output_executable}")
+    print_msg("INFO", f"Output executable generated : {output_executable}")
     
     return 0
 
@@ -133,7 +147,7 @@ def cleanup_preprocessed(path: Path):
     preproc_file = path.with_suffix(".i")
 
     if os.path.exists(preproc_file):
-        print("[blue]Deleting preprocessed file...[/blue]")
+        print_msg("INFO", "Deleting preprocessed file...")
         os.remove(preproc_file)
     
 
@@ -141,5 +155,5 @@ def cleanup_assembly(path: Path):
     assembly_file = path.with_suffix(".s")
 
     if os.path.exists(assembly_file):
-        print("[blue]Deleting assembly file...[/blue]")
+        print_msg("INFO", "Deleting assembly file...")
         os.remove(assembly_file)
