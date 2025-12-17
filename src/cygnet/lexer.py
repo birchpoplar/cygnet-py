@@ -1,7 +1,8 @@
 from enum import Enum, auto
 from dataclasses import dataclass
 from typing import Optional, List
-from .print import print_token_list
+from .print import print_token_list, print_error, print_msg
+from .errors import LexerError
 import re
 
 class TokenType(Enum):
@@ -43,13 +44,15 @@ class Token:
     
 def lexer(source_code: List[str], print_tokens: bool = False):
 
+    # TODO: Add in comment token /* ... */, and also //
+    
     tokens = []
     token_type = ""
     line_num = 1
     
     for line in source_code:
         pos = 0
-        
+
         while pos < len(line):
 
             matches = []
@@ -73,8 +76,12 @@ def lexer(source_code: List[str], print_tokens: bool = False):
                 if token_type:
                     tokens.append((token_type, value, line_num))
 
+            else:
+                raise LexerError(line[pos], line_num, pos)
+                    
         line_num += 1
         
     if print_tokens:
         print_token_list(tokens)
-        
+
+    return 0

@@ -1,5 +1,8 @@
 from enum import IntEnum, Enum
 
+SUCCESS = 0
+FAIL = 1
+
 class CompilerReturnCode(IntEnum):
     COMPILE_SUCCESS = 0
     PREPROCESS_ERROR = 1

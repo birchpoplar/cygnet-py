@@ -4,36 +4,48 @@ import os
 from rich import print
 from .lexer import lexer
 from .print import print_source_code, print_msg, print_error
+from .errors import CompilerError
+from .enums import SUCCESS, FAIL
 
 # Compiler driver functions
 
 def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tokens: bool = False):
-    preprocess_file(path)
+        
+    result = preprocess_file(path)
+    if result != SUCCESS:
+        return FAIL
+
     part_compile = False
+
+    try:
     
-    if mode in ("lex", "parse", "codegen"):
+        if mode in ("lex", "parse", "codegen"):
 
-        part_compile = True
+            part_compile = True
         
-        result = part_compile_file(path, mode, print_source, print_tokens)
+            result = part_compile_file(path, mode, print_source, print_tokens)
 
-        if result == 0:
-            pass
+            if result == 0:
+                pass
+            else:
+                return 1
+        
         else:
-            return 1
+            result = compile_file(path)
+            
+            if result == 0:
+                pass
+            else:
+                return 1
+    
+    except CompilerError as e:
+        print_error(str(e))
+        return 1
         
-    else:
-        result = compile_file(path)
-        
-        if result == 0:
-            pass
-        else:
-            return 1
-
     if mode != "assemble":
         if not part_compile:
             link_file(path)
-
+            
     return 0
     
 def preprocess_file(path: Path):
@@ -68,31 +80,37 @@ def part_compile_file(path: Path, mode: str, print_source: bool = False, print_t
     print_msg("INFO", "Part compiling file...")
 
     source_code = read_lines(path)
-
+    result = 0
+    
     if print_source:
         print_source_code(source_code)
-    
-    if mode == "lex":
-        print_msg("INFO", "Lexing file...")
-        lexer(source_code, print_tokens)
+
+    try:
         
-    elif mode == "parse":
-        print("Parsing file...")
-        pass
-    elif mode == "codegen":
-        print("Generating code...")
-        pass
-    else:
-        # Shouldn't get here
-        print("Doing nothing!")
-        pass
+        if mode == "lex":
+            print_msg("INFO", "Lexing file...")
+            result = lexer(source_code, print_tokens)
+        
+        elif mode == "parse":
+            print("Parsing file...")
+            pass
+        elif mode == "codegen":
+            print("Generating code...")
+            pass
+        else:
+            # Shouldn't get here
+            print("Doing nothing!")
+            return 1
 
-    # Delete preprocessed file if it exists
-    preproc_file = path.with_suffix(".i")
-
-    if os.path.exists(preproc_file):
-        print_msg("INFO", "Deleting preprocessed file...")
-        os.remove(preproc_file)
+    finally:  
+        # Delete preprocessed file if it exists
+        preproc_file = path.with_suffix(".i")
+        
+        print(preproc_file)
+        
+        if os.path.exists(preproc_file):
+            print_msg("INFO", "Deleting preprocessed file...")
+            os.remove(preproc_file)
 
     return 0
 
