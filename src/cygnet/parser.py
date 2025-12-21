@@ -131,20 +131,20 @@ class Parser:
         return self.parse_program()
     
 
-def print_ast(node, indent = 0):
+def print_ast_out(node, indent = 0):
     prefix = "-" * indent
 
     if isinstance(node, Program):
         print(f"{prefix}Program, ln {node.line}")
-        print_ast(node.function, indent + 1)
+        print_ast_out(node.function, indent + 1)
         
     elif isinstance(node, Function):
         print(f"{prefix}Function({node.name}), ln {node.line}")
-        print_ast(node.body, indent + 1)
+        print_ast_out(node.body, indent + 1)
         
     elif isinstance(node, Return):
         print(f"{prefix}Return, ln {node.line}")
-        print_ast(node.expr, indent + 1)
+        print_ast_out(node.expr, indent + 1)
         
     elif isinstance(node, Constant):
         print(f"{prefix}Constant({node.value}), ln {node.line}")

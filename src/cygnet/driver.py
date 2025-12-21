@@ -2,15 +2,15 @@ from pathlib import Path
 import subprocess
 import os
 from rich import print
-from .lexer import lexer
-from .parser import Parser, print_ast
-from .print import print_source_code, print_msg, print_error
+from .lexer import Lexer, lexer
+from .parser import Parser, print_ast_out
+from .print import print_source_code, print_msg, print_error, print_token_list
 from .errors import CompilerError
 from .enums import SUCCESS, FAIL
 
 # Compiler driver functions
 
-def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tokens: bool = False):
+def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False):
         
     result = preprocess_file(path)
     if result != SUCCESS:
@@ -24,7 +24,7 @@ def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tok
 
             part_compile = True
         
-            result = part_compile_file(path, mode, print_source, print_tokens)
+            result = part_compile_file(path, mode, print_source, print_tokens, print_ast)
 
             if result == 0:
                 pass
@@ -77,7 +77,7 @@ def read_lines(path: Path):
 
     return stripped_lines
 
-def part_compile_file(path: Path, mode: str, print_source: bool = False, print_tokens: bool = False):
+def part_compile_file(path: Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False):
     print_msg("INFO", "Part compiling file...")
 
     source_code = read_lines(path)
@@ -90,15 +90,23 @@ def part_compile_file(path: Path, mode: str, print_source: bool = False, print_t
         
         if mode == "lex":
             print_msg("INFO", "Lexing file...")
-            result = lexer(source_code, print_tokens)
-        
+            lexer = Lexer(source_code)
+            result = lexer.lex()
+            if print_tokens:
+                print_token_list(result)
+            
         elif mode == "parse":
             print_msg("INFO", "Lexing file...")
-            tokens = lexer(source_code, print_tokens)
+            lexer = Lexer(source_code)
+            tokens = lexer.lex()
+            if print_tokens:
+                print_token_list(tokens)
             print_msg("INFO", "Parsing file...")
             parser = Parser(tokens)
             result = parser.parse()
-            print_ast(result, 0)
+            if print_ast:
+                print("---AST---")
+                print_ast_out(result, 0)
             
         elif mode == "codegen":
             print("Generating code...")

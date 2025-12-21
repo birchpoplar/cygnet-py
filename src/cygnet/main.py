@@ -31,7 +31,7 @@ def build(
     else:
         mode = "default"
 
-    result = compile_driver(path, mode, print_source=print_source, print_tokens=print_tokens)
+    result = compile_driver(path, mode, print_source=print_source, print_tokens=print_tokens, print_ast=print_ast)
 
     if result == 0:
         raise typer.Exit(0)
