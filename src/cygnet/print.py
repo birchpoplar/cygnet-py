@@ -11,16 +11,17 @@ def print_source_code(source):
 def print_token_list(tokens):
     print("---TOKENS---")
     prev_line_num = 0
-    for token, value, line_num in tokens:
-        if line_num == prev_line_num:
-            print(f"  | {token.name} - {value}")
+    for token in tokens:
+        if token.line_num == prev_line_num:
+            print(f"  | {token.type.name} - {token.value}")
         else:
-            print(f"{prev_line_num+1}: {token.name} - {value}")
+            print(f"{prev_line_num+1}: {token.type.name} - {token.value}")
 
-        prev_line_num = line_num
+        prev_line_num = token.line_num
 
 def print_msg(type, message):
     print(f"[green][{type}][/green]: {message}")
 
 def print_error(message):
     print(f"[red][ERROR][/red]: {message}")
+

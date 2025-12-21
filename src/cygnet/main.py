@@ -13,7 +13,8 @@ def build(
         parse: bool = typer.Option(False, "--parse", help="Run lexer and parser only"),
         codegen: bool = typer.Option(False, "--codegen", help="Run lexer, parser and assembly generation"),
         print_source: bool = typer.Option(False, "--print-source", "-p", help="Print source lines"),
-        print_tokens: bool = typer.Option(False, "--print-tokens", "-t", help="Print tokens")
+        print_tokens: bool = typer.Option(False, "--print-tokens", "-t", help="Print tokens"),
+        print_ast: bool = typer.Option(False, "--print-ast", "-a", help="Print AST")
         ):
     if path is None:
         typer.echo("Error: no source file provided")

@@ -3,6 +3,7 @@ import subprocess
 import os
 from rich import print
 from .lexer import lexer
+from .parser import Parser, print_ast
 from .print import print_source_code, print_msg, print_error
 from .errors import CompilerError
 from .enums import SUCCESS, FAIL
@@ -92,8 +93,13 @@ def part_compile_file(path: Path, mode: str, print_source: bool = False, print_t
             result = lexer(source_code, print_tokens)
         
         elif mode == "parse":
-            print("Parsing file...")
-            pass
+            print_msg("INFO", "Lexing file...")
+            tokens = lexer(source_code, print_tokens)
+            print_msg("INFO", "Parsing file...")
+            parser = Parser(tokens)
+            result = parser.parse()
+            print_ast(result, 0)
+            
         elif mode == "codegen":
             print("Generating code...")
             pass
@@ -105,8 +111,6 @@ def part_compile_file(path: Path, mode: str, print_source: bool = False, print_t
     finally:  
         # Delete preprocessed file if it exists
         preproc_file = path.with_suffix(".i")
-        
-        print(preproc_file)
         
         if os.path.exists(preproc_file):
             print_msg("INFO", "Deleting preprocessed file...")

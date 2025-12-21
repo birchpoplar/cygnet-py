@@ -3,44 +3,9 @@ from dataclasses import dataclass
 from typing import Optional, List
 from .print import print_token_list, print_error, print_msg
 from .errors import LexerError
+from .tokens import TokenType, KEYWORDS, PATTERNS, Token
 import re
 
-class TokenType(Enum):
-    IDENTIFIER = auto()
-    CONSTANT = auto()
-    #Keywords
-    INT = auto()
-    VOID = auto()
-    RETURN = auto()
-    # Punctuation
-    PAREN_OPEN = auto()
-    PAREN_CLOSE = auto()
-    BRACE_OPEN = auto()
-    BRACE_CLOSE = auto()
-    SEMICOLON = auto()
-
-KEYWORDS = {
-    "int": TokenType.INT,
-    "void": TokenType.VOID,
-    "return": TokenType.RETURN,
-    }
-
-PATTERNS = [
-    (r'\s+', None),
-    (r'[a-zA-Z_]\w*\b', TokenType.IDENTIFIER),
-    (r'[0-9]+\b', TokenType.CONSTANT),
-    (r'\(', TokenType.PAREN_OPEN),
-    (r'\)', TokenType.PAREN_CLOSE),
-    (r'{', TokenType.BRACE_OPEN),
-    (r'}', TokenType.BRACE_CLOSE),
-    (r';', TokenType.SEMICOLON),
-]
-
-@dataclass
-class Token:
-    type: TokenType
-    value: Optional[str] = None
-    line_num: int = 0
     
 def lexer(source_code: List[str], print_tokens: bool = False):
 
@@ -74,14 +39,16 @@ def lexer(source_code: List[str], print_tokens: bool = False):
                             token_type = keyword_type
                         
                 if token_type:
-                    tokens.append((token_type, value, line_num))
+                    tokens.append(Token(type=token_type, value=value, line_num=line_num))
 
             else:
                 raise LexerError(line[pos], line_num, pos)
                     
         line_num += 1
+
+    tokens.append(Token(type=TokenType.EOF, value=None, line_num=line_num))
         
     if print_tokens:
         print_token_list(tokens)
 
-    return 0
+    return tokens
