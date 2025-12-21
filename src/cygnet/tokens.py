@@ -29,6 +29,7 @@ KEYWORDS = {
 
 PATTERNS = [
     (r'\s+', None),
+    (r'//.*', None),
     (r'[a-zA-Z_]\w*\b', TokenType.IDENTIFIER),
     (r'[0-9]+\b', TokenType.CONSTANT),
     (r'\(', TokenType.PAREN_OPEN),
@@ -37,7 +38,6 @@ PATTERNS = [
     (r'}', TokenType.BRACE_CLOSE),
     (r';', TokenType.SEMICOLON),
 ]
-
 
 @dataclass
 class Token:

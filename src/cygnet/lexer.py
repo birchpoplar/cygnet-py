@@ -9,11 +9,10 @@ import re
     
 def lexer(source_code: List[str], print_tokens: bool = False):
 
-    # TODO: Add in comment token /* ... */, and also //
-    
     tokens = []
     token_type = ""
     line_num = 1
+    in_comment = False
     
     for line in source_code:
         pos = 0
@@ -21,6 +20,23 @@ def lexer(source_code: List[str], print_tokens: bool = False):
         while pos < len(line):
 
             matches = []
+
+            if not in_comment:
+                comment_start_match = re.match(r'/\*', line[pos:])
+                if comment_start_match:
+                    in_comment = True
+                    pos += comment_start_match.end()
+                    continue
+
+            if in_comment:
+                comment_end_match = re.match(r'\*/', line[pos:])
+                if comment_end_match:
+                    in_comment = False
+                    pos += comment_end_match.end()
+                    continue
+                else:
+                    pos += 1
+                    continue
             
             for pattern, token_type in PATTERNS:
                 match = re.match(pattern, line[pos:])

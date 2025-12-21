@@ -128,11 +128,7 @@ class Parser:
     
     # Main 
     def parse(self):
-        try:
-            return self.parse_program()
-        except ParserError as e:
-            print(str(e))
-            return 1
+        return self.parse_program()
     
 
 def print_ast(node, indent = 0):
