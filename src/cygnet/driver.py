@@ -4,13 +4,14 @@ import os
 from rich import print
 from .lexer import Lexer, lexer
 from .parser import Parser, print_ast_out
+from .codegen import CodeGenerator, Emitter
 from .print import print_source_code, print_msg, print_error, print_token_list
 from .errors import CompilerError
 from .enums import SUCCESS, FAIL
 
 # Compiler driver functions
 
-def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False):
+def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False, print_ir: bool = False, print_asm: bool = False):
         
     result = preprocess_file(path)
     if result != SUCCESS:
@@ -24,7 +25,7 @@ def compile_driver(path:  Path, mode: str, print_source: bool = False, print_tok
 
             part_compile = True
         
-            result = part_compile_file(path, mode, print_source, print_tokens, print_ast)
+            result = part_compile_file(path, mode, print_source, print_tokens, print_ast, print_ir, print_asm)
 
             if result == 0:
                 pass
@@ -77,7 +78,7 @@ def read_lines(path: Path):
 
     return stripped_lines
 
-def part_compile_file(path: Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False):
+def part_compile_file(path: Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False, print_ir: bool = False, print_asm: bool = False):
     print_msg("INFO", "Part compiling file...")
 
     source_code = read_lines(path)
@@ -109,8 +110,32 @@ def part_compile_file(path: Path, mode: str, print_source: bool = False, print_t
                 print_ast_out(result, 0)
             
         elif mode == "codegen":
-            print("Generating code...")
-            pass
+            print_msg("INFO", "Lexing file...")
+            lexer = Lexer(source_code)
+            tokens = lexer.lex()
+            if print_tokens:
+                print_token_list(tokens)
+            print_msg("INFO", "Parsing file...")
+            parser = Parser(tokens)
+            ast_root = parser.parse()
+            if print_ast:
+                print("---AST---")
+                print_ast_out(ast_root, 0)
+            print_msg("INFO", "Generating code...")
+            generator = CodeGenerator(ast_root)
+            program = generator.generate()
+            if print_ir:
+                print(program)
+            emitter = Emitter(program)
+            emitter.emit_program(program)
+            assembly = emitter.get_assembly()
+            asm_file = path.with_suffix(".s")
+            with open(asm_file, 'w') as f:
+                f.write(assembly)
+            print_msg("INFO", f"Assembly written to {asm_file}")
+            if print_asm:
+                print(assembly)
+            
         else:
             # Shouldn't get here
             print("Doing nothing!")

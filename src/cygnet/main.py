@@ -14,7 +14,9 @@ def build(
         codegen: bool = typer.Option(False, "--codegen", help="Run lexer, parser and assembly generation"),
         print_source: bool = typer.Option(False, "--print-source", "-p", help="Print source lines"),
         print_tokens: bool = typer.Option(False, "--print-tokens", "-t", help="Print tokens"),
-        print_ast: bool = typer.Option(False, "--print-ast", "-a", help="Print AST")
+        print_ast: bool = typer.Option(False, "--print-ast", "-a", help="Print AST"),
+        print_ir: bool = typer.Option(False, "--print-ir", "-r", help="Print IR"),
+        print_asm: bool = typer.Option(False, "--print-asm", "-m", help="Print assembly"),
         ):
     if path is None:
         typer.echo("Error: no source file provided")
@@ -31,7 +33,7 @@ def build(
     else:
         mode = "default"
 
-    result = compile_driver(path, mode, print_source=print_source, print_tokens=print_tokens, print_ast=print_ast)
+    result = compile_driver(path, mode, print_source=print_source, print_tokens=print_tokens, print_ast=print_ast, print_ir=print_ir, print_asm=print_asm)
 
     if result == 0:
         raise typer.Exit(0)
