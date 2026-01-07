@@ -43,7 +43,12 @@ class Program(ASTNode):
     def __str__(self):
         return f"Program {self.function.name} at {self.line}"
     
-    
+
+@dataclass
+class UnaryOperator(ASTNode):
+    pass
+
+
 # Derived node classes
     
 @dataclass
@@ -61,6 +66,20 @@ class Constant(Exp):
     def __str__(self):
         return f"Constant({self.value}) at {self.line}"
 
+
+@dataclass
+class Unary(Exp):
+    unary_op: UnaryOperator
+    expr: Exp
+
+@dataclass
+class Complement(UnaryOperator):
+    pass
+
+@dataclass
+class Negate(UnaryOperator):
+    pass
+    
 
 # Main parsing class
     

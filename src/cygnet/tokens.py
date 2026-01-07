@@ -12,7 +12,7 @@ class TokenType(Enum):
     VOID = auto()
     RETURN = auto()
     # Operators
-    TILDE = auto()
+    COMPLEMENT = auto()
     NEGATE = auto()
     DECREMENT = auto()
     # Punctuation
@@ -36,7 +36,7 @@ PATTERNS = [
     (r'//.*', None),
     (r'[a-zA-Z_]\w*\b', TokenType.IDENTIFIER),
     (r'[0-9]+\b', TokenType.CONSTANT),
-    (r'~', TokenType.TILDE),
+    (r'~', TokenType.COMPLEMENT),
     (r'-', TokenType.NEGATE),
     (r'--', TokenType.DECREMENT),
     (r'\(', TokenType.PAREN_OPEN),
