@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from dataclasses import dataclass
 
 # Token type definitions
@@ -11,6 +11,10 @@ class TokenType(Enum):
     INT = auto()
     VOID = auto()
     RETURN = auto()
+    # Operators
+    TILDE = auto()
+    NEGATE = auto()
+    DECREMENT = auto()
     # Punctuation
     PAREN_OPEN = auto()
     PAREN_CLOSE = auto()
@@ -32,6 +36,9 @@ PATTERNS = [
     (r'//.*', None),
     (r'[a-zA-Z_]\w*\b', TokenType.IDENTIFIER),
     (r'[0-9]+\b', TokenType.CONSTANT),
+    (r'~', TokenType.TILDE),
+    (r'-', TokenType.NEGATE),
+    (r'--', TokenType.DECREMENT),
     (r'\(', TokenType.PAREN_OPEN),
     (r'\)', TokenType.PAREN_CLOSE),
     (r'{', TokenType.BRACE_OPEN),
