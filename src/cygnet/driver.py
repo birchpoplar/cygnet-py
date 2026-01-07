@@ -33,7 +33,7 @@ def compile_driver(path: Path, mode: str, print_source: bool = False, print_toke
                 return 1
         
         else:
-            result = compile_file(path)
+            result = compile_file(path, print_tokens, print_ast, print_ir, print_asm)
             
             if result == 0:
                 pass
