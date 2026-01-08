@@ -105,6 +105,7 @@ def part_compile_file(path: Path, mode: str, print_source: bool = False, print_t
             print_msg("INFO", "Parsing file...")
             parser = Parser(tokens)
             result = parser.parse()
+            print(result)
             if print_ast:
                 print("---AST---")
                 print_ast_out(result, 0)

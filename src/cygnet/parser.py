@@ -72,9 +72,11 @@ class Unary(Exp):
     unary_op: UnaryOperator
     expr: Exp
 
+    
 @dataclass
 class Complement(UnaryOperator):
     pass
+
 
 @dataclass
 class Negate(UnaryOperator):
@@ -115,11 +117,34 @@ class Parser:
             raise ParserError(f"Expected {expected_type}", actual.line_num, actual)
     
     # Parsing functions
-    def parse_exp(self):
-        value_token = self.expect(TokenType.CONSTANT)
-        return Constant(self.get_line(), value_token.value)
-        
+
+    def parse_unop(self):
+        token = self.consume()
+        if token.type == TokenType.COMPLEMENT:
+            return Complement(self.get_line())
+        elif token.type == TokenType.NEGATE:
+            return Negate(self.get_line())
+        else:
+            raise ParserError(f"Unexpected unary operator type", token.line_num, token)
     
+    def parse_exp(self):
+        next_token = self.peek()
+        if next_token.type == TokenType.CONSTANT:
+            self.consume()
+            return Constant(self.get_line(), next_token.value)
+        elif next_token.type == TokenType.COMPLEMENT or next_token.type == TokenType.NEGATE:
+            operator = self.parse_unop()
+            inner_exp = self.parse_exp()
+            return Unary(self.get_line(), operator, inner_exp)
+        elif next_token.type == TokenType.PAREN_OPEN:
+            self.consume()
+            inner_exp = self.parse_exp()
+            self.expect(TokenType.PAREN_CLOSE)
+            return inner_exp
+        else:
+            raise ParserError(f"Unexpected token", next_token.line_num, next_token)
+
+        
     def parse_statement(self):
         self.expect(TokenType.RETURN)
         expr = self.parse_exp()
@@ -153,6 +178,8 @@ class Parser:
 def print_ast_out(node, indent = 0):
     prefix = "-" * indent
 
+#    print(node)
+    
     if isinstance(node, Program):
         print(f"{prefix}Program, ln {node.line}")
         print_ast_out(node.function, indent + 1)
@@ -168,5 +195,14 @@ def print_ast_out(node, indent = 0):
     elif isinstance(node, Constant):
         print(f"{prefix}Constant({node.value}), ln {node.line}")
 
+    elif isinstance(node, Unary):
+        print_ast_out(node, indent)
+        
+    elif isinstance(node, Complement):
+        print(f"{prefix}Complement({node.value}), ln {node.line}")
+        
+    elif isinstance(node, Negate):
+        print(f"{prefix}Negate({node.value}), ln {node.line}")
+        
     else:
         print("No node match")
