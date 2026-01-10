@@ -75,12 +75,16 @@ class Unary(Exp):
     
 @dataclass
 class Complement(UnaryOperator):
-    pass
+    
+    def __str__(self):
+        return f"Complement at {self.line}"
 
 
 @dataclass
 class Negate(UnaryOperator):
-    pass
+
+    def __str__(self):
+        return f"Negate at {self.line}"
     
 
 # Main parsing class
@@ -177,8 +181,6 @@ class Parser:
 
 def print_ast_out(node, indent = 0):
     prefix = "-" * indent
-
-#    print(node)
     
     if isinstance(node, Program):
         print(f"{prefix}Program, ln {node.line}")
@@ -196,13 +198,13 @@ def print_ast_out(node, indent = 0):
         print(f"{prefix}Constant({node.value}), ln {node.line}")
 
     elif isinstance(node, Unary):
-        print_ast_out(node, indent)
-        
-    elif isinstance(node, Complement):
-        print(f"{prefix}Complement({node.value}), ln {node.line}")
-        
-    elif isinstance(node, Negate):
-        print(f"{prefix}Negate({node.value}), ln {node.line}")
+        if type(node.unary_op) == Complement:
+            print(f"{prefix} Complement, ln {node.line}")
+        elif type(node.unary_op) == Negate:
+            print(f"{prefix} Negate, ln {node.line}")
+        else:
+            print("No Unary node match")
+        print_ast_out(node.expr, indent + 1)
         
     else:
         print("No node match")

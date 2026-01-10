@@ -27,3 +27,10 @@ class CodeGenError(CompilerError):
         self.message = message
         self.node = node
         super().__init__(f"Code generator error: {message}, '{node}")
+
+
+class TackyGenError(CompilerError):
+    def __init__(self, message, node=None):
+        self.message = message
+        self.node = node
+        super().__init__(f"Tacky generator error: {message}, '{node}")

@@ -5,6 +5,7 @@ from rich import print
 from .lexer import Lexer
 from .parser import Parser, print_ast_out
 from .codegen import CodeGenerator, Emitter
+from .tackygen import TackyGenerator, print_tacky
 from .print import print_source_code, print_msg, print_error, print_token_list
 from .errors import CompilerError
 from .enums import SUCCESS, FAIL
@@ -161,21 +162,23 @@ def generate_assembly(path: Path, print_tokens: bool = False, print_ast: bool = 
         print("---AST---")
         print_ast_out(ast_root, 0)
     print_msg("INFO", "Generating code...")
-    generator = CodeGenerator(ast_root)
+    # generator = CodeGenerator(ast_root)
+    generator = TackyGenerator(ast_root)
     program = generator.generate()
     if print_ir:
-        print(program)
-    emitter = Emitter(program)
-    emitter.emit_program(program)
-    assembly = emitter.get_assembly()
-    asm_file = path.with_suffix(".s")
-    with open(asm_file, 'w') as f:
-        f.write(assembly)
-    print_msg("INFO", f"Assembly written to {asm_file}")
-    if print_asm:
-        print("---Assembly---")
-        print(assembly)
-    return assembly
+        print_tacky(program)
+    return ""
+    # emitter = Emitter(program)
+    # emitter.emit_program(program)
+    # assembly = emitter.get_assembly()
+    # asm_file = path.with_suffix(".s")
+    # with open(asm_file, 'w') as f:
+    #     f.write(assembly)
+    # print_msg("INFO", f"Assembly written to {asm_file}")
+    # if print_asm:
+    #     print("---Assembly---")
+    #     print(assembly)
+    # return assembly
 
 def link_file(path: Path):
 
