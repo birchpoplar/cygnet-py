@@ -8,49 +8,109 @@ from .codegen import CodeGenerator, Emitter
 from .tackygen import TackyGenerator, print_tacky
 from .print import print_source_code, print_msg, print_error, print_token_list
 from .errors import CompilerError
-from .enums import SUCCESS, FAIL
+from .enums import SUCCESS, FAIL, CompileStage, PrintFlags
+
 
 # Compiler driver functions
 
-def compile_driver(path: Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False, print_ir: bool = False, print_asm: bool = False):
-        
-    result = preprocess_file(path)
-    if result != SUCCESS:
+def compile_driver(path: Path, stage: CompileStage, print_flags: PrintFlags):
+
+    # Preprocess file, bug out if failure
+    # TODO: improve preprocess file error generation
+    if preprocess_file(path) != SUCCESS:
         return FAIL
 
-    part_compile = False
-
+    result = SUCCESS
     try:
-    
-        if mode in ("lex", "parse", "codegen"):
-
-            part_compile = True
-        
-            result = part_compile_file(path, mode, print_source, print_tokens, print_ast, print_ir, print_asm)
-
-            if result == 0:
-                pass
-            else:
-                return 1
-        
-        else:
-            result = compile_file(path, print_tokens, print_ast, print_ir, print_asm)
-            
-            if result == 0:
-                pass
-            else:
-                return 1
-    
+        run_pipeline(path, stage, print_flags)
     except CompilerError as e:
         print_error(str(e))
-        return 1
-        
-    if mode != "assemble":
-        if not part_compile:
-            link_file(path)
-            
-    return 0
+        result = FAIL
+    finally:
+        cleanup_files(path, stage)
+
+    return result
+
+
+def run_pipeline(path: Path, stage: CompileStage, print_flags: PrintFlags):
+
+    # 1. Read preprocessed source
+    preproc_file = path.with_suffix(".i")
+    source = read_lines(preproc_file)
+    if print_flags.source:
+        print_source_code(source)
+
+    # 2. Lexer
+    print_msg("INFO", "Lexing file...")
+    lexer = Lexer(source)
+    tokens = lexer.lex()
+    if print_flags.tokens:
+        print_token_list(tokens)
+    if stage == CompileStage.LEX:
+        return
+
+    # 3. Parser
+    print_msg("INFO", "Parsing file...")
+    parser = Parser(tokens)
+    ast = parser.parse()
+    if print_flags.ast:
+        print_ast_out(ast, 0)
+    if stage == CompileStage.PARSE:
+        return
+
+    # 4. TACKY Generation
+    print_msg("INFO", "Generating TACKY...")
+    tacky_gen = TackyGenerator(ast)
+    ir = tacky_gen.generate()
+    if print_flags.tacky:
+        print_tacky(ir)
+    if stage == CompileStage.TACKY:
+        return
+
+    # 5. Code Generation
+    print_msg("INFO", "Generating Assembly...")
+    codegen = CodeGenerator(ir)
+    codegen_ir = codegen.generate()
+    if print_flags.ir:
+        print(ir)
+
+    # 5b. Emit assembly text
+    emitter = Emitter(codegen_ir)
+    emitter.emit_program(codegen_ir)
+    assembly = emitter.get_assembly()
     
+    if print_flags.asm:
+        print(assembly)
+    if stage == CompileStage.CODEGEN:
+        return
+
+    # 6. Write Assembly File (needed for ASSEMBLE & LINK)
+    print_msg("INFO", "Writing assembly file...")
+    asm_file = path.with_suffix(".s")
+    asm_file.write_text(assembly)
+    if stage == CompileStage.ASSEMBLE:
+        return
+    
+    # 7. Link
+    link_file(path)
+    return
+        
+
+def cleanup_files(path: Path, stage: CompileStage):
+    # Always delete .i
+    preproc_file = path.with_suffix(".i")
+    if preproc_file.exists():
+        print_msg("INFO", "Deleting preprocessed file...")
+        preproc_file.unlink()
+
+    # Delete .s unless we stopped at ASSEMBLE or CODEGEN
+    if stage not in (CompileStage.ASSEMBLE, CompileStage.CODEGEN):
+        asm_file = path.with_suffix(".s")
+        if asm_file.exists():
+            print_msg("INFO", "Deleting assembly file...")
+            asm_file.unlink()
+
+        
 def preprocess_file(path: Path):
 
     source_file = path
@@ -71,6 +131,7 @@ def preprocess_file(path: Path):
 
     return 0
 
+
 def read_lines(path: Path):
     with open(path, 'r') as f:
         lines = f.readlines()
@@ -79,106 +140,6 @@ def read_lines(path: Path):
 
     return stripped_lines
 
-def part_compile_file(path: Path, mode: str, print_source: bool = False, print_tokens: bool = False, print_ast: bool = False, print_ir: bool = False, print_asm: bool = False):
-    print_msg("INFO", "Part compiling file...")
-
-    source_code = read_lines(path)
-    result = 0
-    
-    if print_source:
-        print_source_code(source_code)
-
-    try:
-        
-        if mode == "lex":
-            print_msg("INFO", "Lexing file...")
-            lexer = Lexer(source_code)
-            result = lexer.lex()
-            if print_tokens:
-                print_token_list(result)
-            
-        elif mode == "parse":
-            print_msg("INFO", "Lexing file...")
-            lexer = Lexer(source_code)
-            tokens = lexer.lex()
-            if print_tokens:
-                print_token_list(tokens)
-            print_msg("INFO", "Parsing file...")
-            parser = Parser(tokens)
-            result = parser.parse()
-            print(result)
-            if print_ast:
-                print("---AST---")
-                print_ast_out(result, 0)
-            
-        elif mode == "codegen":
-            assembly = generate_assembly(path, print_tokens, print_ast, print_ir, print_asm) 
-        else:
-            # Shouldn't get here
-            print("Doing nothing!")
-            return 1
-
-    finally:  
-        # Delete preprocessed file if it exists
-        preproc_file = path.with_suffix(".i")
-        
-        if os.path.exists(preproc_file):
-            print_msg("INFO", "Deleting preprocessed file...")
-            os.remove(preproc_file)
-
-        # Delete assembly file if it exists (for intermediate stages)
-        asm_file = path.with_suffix(".s")
-
-        if os.path.exists(asm_file):
-            print_msg("INFO", "Deleting assembly file...")
-            os.remove(asm_file)
-            
-    return 0
-
-def compile_file(path: Path, print_tokens: bool = False, print_ast: bool = False, print_ir: bool = False, print_asm: bool = False):
-
-    print_msg("INFO", f"Compiling file : {path}")
-    
-    assembly = generate_assembly(path, print_tokens, print_ast, print_ir, print_asm) 
-
-    cleanup_preprocessed(path)
-    
-    return 0
-
-def generate_assembly(path: Path, print_tokens: bool = False, print_ast: bool = False, print_ir: bool = False, print_asm: bool = False):
-    print_msg("INFO", "Generating assembly with pipeline...")
-    preproc_file = path.with_suffix(".i")
-    source_code = read_lines(preproc_file)
-
-    print_msg("INFO", "Lexing file...")
-    lexer = Lexer(source_code)
-    tokens = lexer.lex()
-    if print_tokens:
-        print_token_list(tokens)
-    print_msg("INFO", "Parsing file...")
-    parser = Parser(tokens)
-    ast_root = parser.parse()
-    if print_ast:
-        print("---AST---")
-        print_ast_out(ast_root, 0)
-    print_msg("INFO", "Generating code...")
-    # generator = CodeGenerator(ast_root)
-    generator = TackyGenerator(ast_root)
-    program = generator.generate()
-    if print_ir:
-        print_tacky(program)
-    return ""
-    # emitter = Emitter(program)
-    # emitter.emit_program(program)
-    # assembly = emitter.get_assembly()
-    # asm_file = path.with_suffix(".s")
-    # with open(asm_file, 'w') as f:
-    #     f.write(assembly)
-    # print_msg("INFO", f"Assembly written to {asm_file}")
-    # if print_asm:
-    #     print("---Assembly---")
-    #     print(assembly)
-    # return assembly
 
 def link_file(path: Path):
 
@@ -203,18 +164,3 @@ def link_file(path: Path):
     print_msg("INFO", f"Output executable generated : {output_executable}")
     
     return 0
-
-def cleanup_preprocessed(path: Path):
-    preproc_file = path.with_suffix(".i")
-
-    if os.path.exists(preproc_file):
-        print_msg("INFO", "Deleting preprocessed file...")
-        os.remove(preproc_file)
-    
-
-def cleanup_assembly(path: Path):
-    assembly_file = path.with_suffix(".s")
-
-    if os.path.exists(assembly_file):
-        print_msg("INFO", "Deleting assembly file...")
-        os.remove(assembly_file)

@@ -70,7 +70,7 @@ class CodeGenerator:
 
     def generate_function(self, ast_function):
         body = self.generate_statement(ast_function.body)
-        return Function(ast_function.name, body)
+        return Function(ast_function.identifier, body)
 
     def generate_statement(self, ast_statement):
         instructions = []
