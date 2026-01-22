@@ -4,7 +4,7 @@ import os
 from rich import print
 from .lexer import Lexer
 from .parser import Parser, print_ast_out
-from .codegen import CodeGenerator, Emitter
+from .codegen import TackyToAssembly 
 from .tackygen import TackyGenerator, print_tacky
 from .print import print_source_code, print_msg, print_error, print_token_list
 from .errors import CompilerError

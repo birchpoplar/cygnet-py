@@ -22,11 +22,11 @@ class ParserError(CompilerError):
         super().__init__(f"Parser error: {message}, '{token.value}' at line {line}")
 
 
-class CodeGenError(CompilerError):
+class TackyAssemblyError(CompilerError):
     def __init__(self, message, node=None):
         self.message = message
         self.node = node
-        super().__init__(f"Code generator error: {message}, '{node}")
+        super().__init__(f"Tacky to assembly error: {message}, '{node}")
 
 
 class TackyGenError(CompilerError):

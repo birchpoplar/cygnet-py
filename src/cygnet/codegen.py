@@ -1,38 +1,59 @@
 from dataclasses import dataclass
 from typing import List
-from .parser import ASTNode, Return, Constant
-from .errors import CodeGenError
+from enum import Enum, auto
+from . import tackygen as tacky
+from .errors import TackyAssemblyError
 
 
-# Code Generation Nodes, abstract base classes
+# Tacky to Assembly Nodes, abstract base classes
 
 @dataclass
-class CodeGenNode:
+class TackyAssemblyNode:
+    pass
+
+
+class Reg(Enum):
+    AX = auto()
+    R10 = auto()
+
+
+@dataclass
+class Operand(TackyAssemblyNode):
     pass
 
 
 @dataclass
-class Operand(CodeGenNode):
+class UnaryOperator(TackyAssemblyNode):
     pass
 
 
 @dataclass
-class Instruction(CodeGenNode):
+class Instruction(TackyAssemblyNode):
     pass
 
 
 @dataclass
-class Function(CodeGenNode):
+class Function(TackyAssemblyNode):
     name: str
     instructions: List[Instruction]
 
 
 @dataclass
-class Program(CodeGenNode):
+class Program(TackyAssemblyNode):
     function: 'Function'
 
 
 # Derived node classes
+
+@dataclass
+class Neg(UnaryOperator):
+    pass
+
+
+@dataclass
+class Not(UnaryOperator):
+    pass
+
 
 @dataclass
 class Mov(Instruction):
@@ -41,9 +62,30 @@ class Mov(Instruction):
 
 
 @dataclass
+class AllocateStack(Instruction):
+    value: int
+
+    
+@dataclass
+class Unary(Instruction):
+    unary_op: UnaryOperator
+    operand: Operand
+
+    
+@dataclass
 class Ret(Instruction):
     pass
 
+
+@dataclass
+class Pseudo(Operand):
+    identifier: str
+
+
+@dataclass
+class Stack(Operand):
+    offset: int
+    
 
 @dataclass
 class Imm(Operand):
@@ -52,86 +94,60 @@ class Imm(Operand):
 
 @dataclass
 class Register(Operand):
-    name: str
+    reg: Reg
 
     
-class CodeGenerator:
-    def __init__(self, ast_root: ASTNode):
-        self.ast_root = ast_root
+class TackyToAssembly:
+    def __init__(self, tacky_root: tacky.Program):
+        self.tacky_root = tacky_root
 
 
-    # Code generation functions
+    # Tacky to assembly functions
     def generate(self):
-        return self.generate_program(self.ast_root)
+        return self.generate_program(self.tacky_root)
         
-    def generate_program(self, ast_program):
-        function = self.generate_function(ast_program.function)
+    def generate_program(self, tacky_program):
+        function = self.generate_function(tacky_program.function)
         return Program(function=function)
 
-    def generate_function(self, ast_function):
-        body = self.generate_statement(ast_function.body)
-        return Function(ast_function.identifier, body)
-
-    def generate_statement(self, ast_statement):
+    def generate_function(self, tacky_function):
         instructions = []
-        if isinstance(ast_statement, Return):
-            operand = self.generate_exp(ast_statement.expr)
-            instructions.append(Mov(operand, Register(name='eax')))
-            instructions.append(Ret())
-            return instructions
-        
-    def generate_exp(self, ast_exp):
-        if isinstance(ast_exp, Constant):
-            return Imm(value=ast_exp.value)
-        raise CodeGenError(f"Unexpected expression type", ast_exp)
+        for tacky_insn in tacky_function.body:
+            asm_insns = self.convert_instruction(tacky_insn)
+            instructions.extend(asm_insns)
+        return Function(tacky_function.identifier, instructions)
 
-
-class Emitter:
-    def __init__(self, code_root: Program):
-        self.code_root = code_root
-        self.assembly_lines = []
-        self.indent = 4
-
-    def emit_program(self, program):
-        self.emit_function(program.function)
-        
-    def emit_function(self, function):
-        indentation = " "*self.indent 
-        self.assembly_lines.append(self._emit_comment("Function", function))
-        self.assembly_lines.append(f"{indentation}.globl {function.name}")
-        self.assembly_lines.append(f"{function.name}:")
-        for instruction in function.instructions:
-            self.emit_instruction(instruction)
-
-        self.assembly_lines.append("# Confirm code does not require executable stack")
-        self.assembly_lines.append(".section .note.GNU-stack,\"\",@progbits")
-            
-    def emit_instruction(self, instruction):
-        if isinstance(instruction, Ret):
-            self._emit_insn("ret")
-        elif isinstance(instruction, Mov):
-            self._emit_insn("movl", instruction.op_src, instruction.op_dst)
-        
-    def get_assembly(self):
-        return "\n".join(self.assembly_lines)
-
-    def _emit_comment(self, type, object):
-        return f"# {type}: {object}"
-    
-    def _emit_insn(self, mnemonic, *operands):
-        indentation = " "*self.indent
-        formatted_ops = [self._format_operand(op) for op in operands]
-        operands_str = ", ".join(formatted_ops)
-        if operands_str:
-            line = f"{indentation}{mnemonic} {operands_str}"
+    def convert_instruction(self, tacky_insn):
+        asm_insns = []
+        if isinstance(tacky_insn, tacky.Return):
+            asm_insns.append(Mov(self.convert_val(tacky_insn.val), Register(Reg.AX))) 
+            asm_insns.append(Ret())
+        elif isinstance(tacky_insn, tacky.Unary):
+            asm_insns.append(Mov(self.convert_val(tacky_insn.src), self.convert_val(tacky_insn.dst)))
+            asm_insns.append(Unary(self.convert_unary_op(tacky_insn.unary_op), self.convert_val(tacky_insn.dst)))
         else:
-            line = f"{indentation}{mnemonic}"
-        self.assembly_lines.append(self._emit_comment("Instruction", formatted_ops))
-        self.assembly_lines.append(line)
+            raise TackyAssemblyError("Error processing assembly from TACKY", tacky_insn)
+        return asm_insns
+            
+    def convert_val(self, val):
+        pass
 
-    def _format_operand(self, operand):
-        if isinstance(operand, Imm):
-            return f"${operand.value}"
-        elif isinstance(operand, Register):
-            return f"%{operand.name}"
-        raise CodeGenError(f"Unexpected operand type", operand)
+    
+    def convert_unary_op(self, unary_op):
+        pass
+            
+    
+    # def generate_statement(self, tacky_statement):
+    #     instructions = []
+    #     if isinstance(tacky_statement, Return):
+    #         operand = self.generate_exp(tacky_statement.expr)
+    #         instructions.append(Mov(operand, Register(reg=Reg.AX)))
+    #         instructions.append(Ret())
+    #         return instructions
+        
+    # def generate_exp(self, tacky_exp):
+    #     if isinstance(tacky_exp, Constant):
+    #         return Imm(value=ast_exp.value)
+    #     raise TackyAssemblyError(f"Unexpected expression type", ast_exp)
+
+
