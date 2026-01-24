@@ -4,7 +4,7 @@ import os
 from rich import print
 from .lexer import Lexer
 from .parser import Parser, print_ast_out
-from .codegen import TackyToAssembly 
+from .codegen import PseudoReplacer, TackyToAssembly 
 from .tackygen import TackyGenerator, print_tacky
 from .print import print_source_code, print_msg, print_error, print_token_list
 from .errors import CompilerError
@@ -69,11 +69,15 @@ def run_pipeline(path: Path, stage: CompileStage, print_flags: PrintFlags):
 
     # 5. Code Generation
     print_msg("INFO", "Generating Assembly...")
-    codegen = CodeGenerator(ir)
+    codegen = TackyToAssembly(ir)
     codegen_ir = codegen.generate()
     if print_flags.ir:
-        print(ir)
-
+        print(codegen_ir)
+    codegen_pr = PseudoReplacer(codegen_ir)
+    codegen_pr_ir = codegen_pr.replace()
+    if print_flags.ir:
+        print(codegen_pr_ir)
+    
     # 5b. Emit assembly text
     emitter = Emitter(codegen_ir)
     emitter.emit_program(codegen_ir)
