@@ -4,11 +4,12 @@ import os
 from rich import print
 from .lexer import Lexer
 from .parser import Parser, print_ast_out
-from .codegen import PseudoReplacer, TackyToAssembly 
+from .codegen import PseudoReplacer, TackyToAssembly, FixingUpInstructions
 from .tackygen import TackyGenerator, print_tacky
 from .print import print_source_code, print_msg, print_error, print_token_list
 from .errors import CompilerError
 from .enums import SUCCESS, FAIL, CompileStage, PrintFlags
+from .emitter import Emitter
 
 
 # Compiler driver functions
@@ -72,15 +73,23 @@ def run_pipeline(path: Path, stage: CompileStage, print_flags: PrintFlags):
     codegen = TackyToAssembly(ir)
     codegen_ir = codegen.generate()
     if print_flags.ir:
+        print_msg("INFO", "Printing IR:")
         print(codegen_ir)
     codegen_pr = PseudoReplacer(codegen_ir)
     codegen_pr_ir = codegen_pr.replace()
     if print_flags.ir:
+        print_msg("INFO", "Printing Pseudo Replaced IR:")
         print(codegen_pr_ir)
-    
+
+    codegen_fu = FixingUpInstructions(codegen_pr_ir)
+    codegen_fu_ir = codegen_fu.replace()
+    if print_flags.ir:
+        print_msg("INFO", "Printing Fixed Up Instructions IR:")
+        print(codegen_fu_ir)
+        
     # 5b. Emit assembly text
-    emitter = Emitter(codegen_ir)
-    emitter.emit_program(codegen_ir)
+    emitter = Emitter(codegen_fu_ir)
+    emitter.emit_program(codegen_fu_ir)
     assembly = emitter.get_assembly()
     
     if print_flags.asm:
@@ -162,8 +171,6 @@ def link_file(path: Path):
     except subprocess.CalledProcessError as e:
         print(f"Linking failed:\n{e.stderr}")
         return 1
-
-    cleanup_assembly(path)
 
     print_msg("INFO", f"Output executable generated : {output_executable}")
     

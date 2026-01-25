@@ -36,6 +36,7 @@ class Instruction(TackyAssemblyNode):
 class Function(TackyAssemblyNode):
     name: str
     instructions: List[Instruction]
+    stack_offset: int = 0    
 
 
 @dataclass
@@ -148,8 +149,10 @@ class TackyToAssembly:
 class PseudoReplacer:
     def __init__(self, asm_root: Program):
         self.asm_root = asm_root
+        self.pseudo_map = {}
+        self.stack_offset = 0
 
-    # Tacky to assembly functions
+    # Functions to replace pseudo names
     def replace(self):
         return self.replace_program(self.asm_root)
 
@@ -158,13 +161,11 @@ class PseudoReplacer:
         return Program(function=function)
     
     def replace_function(self, asm_function):
-        self.pseudo_map = {}
-        self.stack_offset = 0
         cnv_asm_insns = []
         for asm_insn in asm_function.instructions:
             cnv_asm_insn = self.replace_instruction(asm_insn)
             cnv_asm_insns.append(cnv_asm_insn)
-        return Function(asm_function.name, cnv_asm_insns)
+        return Function(asm_function.name, cnv_asm_insns, self.stack_offset)
 
     def replace_instruction(self, asm_insn):
         if isinstance(asm_insn, Mov):
@@ -186,3 +187,38 @@ class PseudoReplacer:
             return asm_op
         else:
             raise TackyAssemblyError("Error replacing operand", asm_op)
+
+class FixingUpInstructions:
+    def __init__(self, asm_root: Program):
+        self.asm_root = asm_root
+
+    # Functions to:
+    # 1. add the Allocate Stack instruction
+    # 2. correct any invalid Mov instructions
+    def replace(self):
+        return self.replace_program(self.asm_root)
+
+    def replace_program(self, asm_program):
+        function = self.replace_function(asm_program.function)
+        return Program(function=function)
+    
+    def replace_function(self, asm_function):
+        cnv_asm_insns = []
+        cnv_asm_insns.append(AllocateStack(asm_function.stack_offset))
+        for asm_insn in asm_function.instructions:
+            result = self.replace_instruction(asm_insn)
+            if isinstance(result, list):
+                cnv_asm_insns.extend(result)
+            else:
+                cnv_asm_insns.append(result)
+        return Function(asm_function.name, cnv_asm_insns)
+
+    def replace_instruction(self, asm_insn):
+        if not isinstance(asm_insn, Mov):
+            return asm_insn
+        if isinstance(asm_insn.op_src, Stack) and isinstance(asm_insn.op_dst, Stack):
+            fixed_insns = []
+            fixed_insns.append(Mov(asm_insn.op_src, Register(Reg.R10)))
+            fixed_insns.append(Mov(Register(Reg.R10), asm_insn.op_dst))
+            return fixed_insns
+        return asm_insn
