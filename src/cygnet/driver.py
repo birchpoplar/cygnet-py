@@ -73,17 +73,20 @@ def run_pipeline(path: Path, stage: CompileStage, print_flags: PrintFlags):
     codegen = TackyToAssembly(ir)
     codegen_ir = codegen.generate()
     if print_flags.ir:
+        print("\n")
         print_msg("INFO", "Printing IR:")
         print(codegen_ir)
     codegen_pr = PseudoReplacer(codegen_ir)
     codegen_pr_ir = codegen_pr.replace()
     if print_flags.ir:
+        print("\n")
         print_msg("INFO", "Printing Pseudo Replaced IR:")
         print(codegen_pr_ir)
 
     codegen_fu = FixingUpInstructions(codegen_pr_ir)
     codegen_fu_ir = codegen_fu.replace()
     if print_flags.ir:
+        print("\n")
         print_msg("INFO", "Printing Fixed Up Instructions IR:")
         print(codegen_fu_ir)
         
@@ -93,6 +96,8 @@ def run_pipeline(path: Path, stage: CompileStage, print_flags: PrintFlags):
     assembly = emitter.get_assembly()
     
     if print_flags.asm:
+        print("\n")
+        print_msg("INFO", "Printing Assembly:")
         print(assembly)
     if stage == CompileStage.CODEGEN:
         return
